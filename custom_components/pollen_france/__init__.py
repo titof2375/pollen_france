@@ -11,7 +11,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN, CONF_LATITUDE, CONF_LONGITUDE, CONF_TRACKER
+from .const import DOMAIN, CONF_NAME, CONF_LATITUDE, CONF_LONGITUDE, CONF_TRACKER
 from .coordinator import PollenFranceCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -28,8 +28,9 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # v1 avait un champ INSEE, on le supprime et on garde lat/lon
     new_data.pop("insee", None)
 
-    # v2/v3 : ajout du champ tracker s'il est absent
+    # ajout des champs manquants
     new_data.setdefault(CONF_TRACKER, None)
+    new_data.setdefault(CONF_NAME, f"Pollen France ({new_data.get(CONF_LATITUDE, ''):.2f}, {new_data.get(CONF_LONGITUDE, ''):.2f})")
 
     # lat/lon obligatoires : fallback sur la position HA si absents
     if CONF_LATITUDE not in new_data:

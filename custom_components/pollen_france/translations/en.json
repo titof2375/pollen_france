@@ -3,8 +3,9 @@
     "step": {
       "user": {
         "title": "Pollen France",
-        "description": "Select a person/phone to track its location (holidays), or leave empty to use your HA fixed location.",
+        "description": "Give a name to this instance (e.g. Home, Christophe, Holidays...).",
         "data": {
+          "name": "Name",
           "tracker": "Person or phone to track (optional)",
           "latitude": "Latitude (default fixed location)",
           "longitude": "Longitude (default fixed location)"
@@ -12,11 +13,12 @@
       }
     },
     "error": {
+      "name_required": "Name is required.",
       "cannot_connect": "Cannot connect to APIs. Check your internet connection.",
       "unknown": "Unexpected error. Check the logs for details."
     },
     "abort": {
-      "already_configured": "This location is already configured."
+      "already_configured": "This instance is already configured."
     }
   }
 }

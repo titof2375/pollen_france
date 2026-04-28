@@ -2,6 +2,7 @@
 
 DOMAIN = "pollen_france"
 
+CONF_NAME      = "name"
 CONF_LATITUDE  = "latitude"
 CONF_LONGITUDE = "longitude"
 CONF_TRACKER   = "tracker"        # entité person/device_tracker (optionnel)
