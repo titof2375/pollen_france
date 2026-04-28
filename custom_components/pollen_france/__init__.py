@@ -19,6 +19,28 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS: list[Platform] = [Platform.SENSOR]
 
 
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Migration des anciennes entrées vers le schéma actuel."""
+    _LOGGER.debug("Migration Pollen France : v%s → v3", entry.version)
+
+    new_data = dict(entry.data)
+
+    # v1 avait un champ INSEE, on le supprime et on garde lat/lon
+    new_data.pop("insee", None)
+
+    # v2/v3 : ajout du champ tracker s'il est absent
+    new_data.setdefault(CONF_TRACKER, None)
+
+    # lat/lon obligatoires : fallback sur la position HA si absents
+    if CONF_LATITUDE not in new_data:
+        new_data[CONF_LATITUDE] = hass.config.latitude
+    if CONF_LONGITUDE not in new_data:
+        new_data[CONF_LONGITUDE] = hass.config.longitude
+
+    hass.config_entries.async_update_entry(entry, data=new_data, version=3)
+    return True
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
 
