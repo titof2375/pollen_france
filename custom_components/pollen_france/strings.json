@@ -3,10 +3,11 @@
     "step": {
       "user": {
         "title": "Pollen France",
-        "description": "La latitude/longitude est pré-remplie depuis votre configuration Home Assistant.",
+        "description": "Choisissez une personne/téléphone pour suivre sa position (vacances), ou laissez vide pour utiliser la position fixe de votre HA.",
         "data": {
-          "latitude": "Latitude",
-          "longitude": "Longitude"
+          "tracker": "Personne ou téléphone à suivre (optionnel)",
+          "latitude": "Latitude (position fixe par défaut)",
+          "longitude": "Longitude (position fixe par défaut)"
         }
       }
     },

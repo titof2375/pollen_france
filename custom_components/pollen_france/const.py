@@ -2,16 +2,15 @@
 
 DOMAIN = "pollen_france"
 
-CONF_INSEE = "insee"
-CONF_LATITUDE = "latitude"
+CONF_LATITUDE  = "latitude"
 CONF_LONGITUDE = "longitude"
+CONF_TRACKER   = "tracker"        # entité person/device_tracker (optionnel)
 
-UPDATE_INTERVAL_HOURS = 3
+UPDATE_INTERVAL_MINUTES = 60      # refresh toutes les heures
 
 # ── Open-Meteo Air Quality (CAMS/Copernicus, gratuit, sans clé) ───────────────
 OPEN_METEO_URL = "https://air-quality-api.open-meteo.com/v1/air-quality"
 
-# Variables Open-Meteo → clé normalisée
 OPEN_METEO_VARS = {
     "alder_pollen":   "aulne",
     "birch_pollen":   "bouleau",
@@ -27,9 +26,8 @@ SILAM_BASE_URL = (
     "/silam_europe_pollen_v6_1/silam_europe_pollen_v6_1_best.ncd"
 )
 
-# Variables SILAM → clé normalisée
 SILAM_VARS = {
-    "cnc_POLLEN_HAZEL_m23":   "noisetier",   # unique à SILAM
+    "cnc_POLLEN_HAZEL_m23":   "noisetier",
     "cnc_POLLEN_BIRCH_m22":   "bouleau",
     "cnc_POLLEN_ALDER_m22":   "aulne",
     "cnc_POLLEN_GRASS_m32":   "graminees",
@@ -48,8 +46,7 @@ RISK_LEVELS = {
     5: "Très élevé",
 }
 
-# Seuils SILAM grains/m³ → niveau 1-5 (EAN / SILAM index)
-# [seuil_lvl1, lvl2, lvl3, lvl4, lvl5]
+# Seuils grains/m³ → niveau 1-5 (EAN)
 SILAM_THRESHOLDS: dict[str, list[float]] = {
     "bouleau":   [1,   10,  80,  200, 1500],
     "aulne":     [1,   10,  50,  200, 1000],
@@ -60,10 +57,8 @@ SILAM_THRESHOLDS: dict[str, list[float]] = {
     "ambroisie": [0.5,  5,  10,   30,  100],
 }
 
-# Seuils Open-Meteo grains/m³ → niveau 1-5 (mêmes références EAN)
 OPEN_METEO_THRESHOLDS = SILAM_THRESHOLDS
 
-# Attributs supplémentaires des capteurs
 ATTR_RISK          = "risque"
 ATTR_SOURCE        = "source"
 ATTR_CONCENTRATION = "concentration_m3"
