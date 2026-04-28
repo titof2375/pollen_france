@@ -1,0 +1,13 @@
+{
+  "domain": "pollen_france",
+  "name": "Pollen France",
+  "version": "1.0.0",
+  "config_flow": true,
+  "documentation": "https://github.com/leprince/pollen_france",
+  "issue_tracker": "https://github.com/leprince/pollen_france/issues",
+  "dependencies": [],
+  "codeowners": [],
+  "requirements": [],
+  "iot_class": "cloud_polling",
+  "integration_type": "service"
+}

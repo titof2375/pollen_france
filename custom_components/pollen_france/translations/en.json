@@ -1,0 +1,23 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Pollen France",
+        "description": "Enter the INSEE code of your municipality (5 digits, e.g. 87085 for Limoges).\nLatitude/longitude is pre-filled from your Home Assistant configuration.",
+        "data": {
+          "insee": "Municipality INSEE code",
+          "latitude": "Latitude",
+          "longitude": "Longitude"
+        }
+      }
+    },
+    "error": {
+      "invalid_insee": "The INSEE code must be exactly 5 digits.",
+      "cannot_connect": "Cannot connect to the API. Check your internet connection.",
+      "unknown": "Unexpected error. Check the logs for details."
+    },
+    "abort": {
+      "already_configured": "This municipality is already configured."
+    }
+  }
+}
