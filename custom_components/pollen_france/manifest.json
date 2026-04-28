@@ -1,10 +1,10 @@
 {
   "domain": "pollen_france",
   "name": "Pollen France",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "config_flow": true,
-  "documentation": "https://github.com/leprince/pollen_france",
-  "issue_tracker": "https://github.com/leprince/pollen_france/issues",
+  "documentation": "https://github.com/titof2375/pollen_france",
+  "issue_tracker": "https://github.com/titof2375/pollen_france/issues",
   "dependencies": [],
   "codeowners": [],
   "requirements": [],

@@ -1,8 +1,8 @@
 """Intégration Pollen France.
 
-Combine les données de :
-- Recosanté (Atmo France) — niveaux officiels, ~14 types de pollen
-- SILAM THREDDS (FMI) — concentrations scientifiques, types complémentaires
+Combine :
+- Open-Meteo (CAMS/Copernicus) — 6 types, gratuit, sans clé
+- SILAM THREDDS v6.1 (FMI)    — 7 types dont noisetier, gratuit, sans clé
 """
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN, CONF_INSEE, CONF_LATITUDE, CONF_LONGITUDE
+from .const import DOMAIN, CONF_LATITUDE, CONF_LONGITUDE
 from .coordinator import PollenFranceCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -26,7 +26,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     coordinator = PollenFranceCoordinator(
         hass=hass,
-        insee=entry.data[CONF_INSEE],
         latitude=entry.data[CONF_LATITUDE],
         longitude=entry.data[CONF_LONGITUDE],
     )

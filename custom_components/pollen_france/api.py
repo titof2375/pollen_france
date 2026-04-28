@@ -1,8 +1,8 @@
-"""API clients for Pollen France integration.
+"""API clients pour Pollen France.
 
 Sources :
-- Recosanté (Atmo France officiel) → niveaux de risque 0-5 pour ~14 types
-- SILAM THREDDS (FMI) → concentrations scientifiques en particules/m³
+- Open-Meteo (CAMS/Copernicus) → 6 types, gratuit, sans clé, prioritaire
+- SILAM THREDDS v6.1 (FMI)    → 7 types dont noisetier, gratuit, sans clé
 """
 from __future__ import annotations
 
@@ -16,155 +16,135 @@ from typing import Any
 import aiohttp
 
 from .const import (
-    RECOSVANTE_URL,
-    RECOSVANTE_POLLEN_MAP,
+    OPEN_METEO_URL,
+    OPEN_METEO_VARS,
+    OPEN_METEO_THRESHOLDS,
     SILAM_BASE_URL,
     SILAM_VARS,
-    SILAM_VAR_NAMES,
     SILAM_THRESHOLDS,
     RISK_LEVELS,
 )
 
 _LOGGER = logging.getLogger(__name__)
-
 TIMEOUT = aiohttp.ClientTimeout(total=30)
 
 
 class PollenFranceApiError(Exception):
-    """Erreur générique de l'API Pollen France."""
+    """Erreur générique."""
 
 
 class PollenFranceApi:
-    """Client API combinant Recosanté + SILAM."""
+    """Client combinant Open-Meteo + SILAM."""
 
     def __init__(
         self,
         session: aiohttp.ClientSession,
-        insee: str,
         latitude: float,
         longitude: float,
     ) -> None:
         self._session = session
-        self._insee = insee
-        self._latitude = latitude
-        self._longitude = longitude
-
-    # ─────────────────────────────────────────────────────────────────────────
-    # Point d'entrée principal
-    # ─────────────────────────────────────────────────────────────────────────
+        self._lat = latitude
+        self._lon = longitude
 
     async def fetch_all(self) -> dict[str, Any]:
-        """Récupère et fusionne les données Recosanté + SILAM."""
-        recosvante_data, silam_data = await asyncio.gather(
-            self._fetch_recosvante(),
+        """Récupère et fusionne les données des deux sources."""
+        open_meteo_data, silam_data = await asyncio.gather(
+            self._fetch_open_meteo(),
             self._fetch_silam(),
             return_exceptions=True,
         )
 
-        if isinstance(recosvante_data, Exception):
-            _LOGGER.warning("Recosanté unavailable: %s", recosvante_data)
-            recosvante_data = {}
+        if isinstance(open_meteo_data, Exception):
+            _LOGGER.warning("Open-Meteo indisponible : %s", open_meteo_data)
+            open_meteo_data = {}
 
         if isinstance(silam_data, Exception):
-            _LOGGER.warning("SILAM unavailable: %s", silam_data)
+            _LOGGER.warning("SILAM indisponible : %s", silam_data)
             silam_data = {}
 
-        return self._merge(recosvante_data, silam_data)
+        return self._merge(open_meteo_data, silam_data)
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # Recosanté
-    # ─────────────────────────────────────────────────────────────────────────
+    # ── Open-Meteo ────────────────────────────────────────────────────────────
 
-    async def _fetch_recosvante(self) -> dict[str, Any]:
-        """Interroge l'API Recosanté et retourne les niveaux par type de pollen."""
-        params = {"insee": self._insee}
+    async def _fetch_open_meteo(self) -> dict[str, Any]:
+        """Interroge Open-Meteo et retourne les concentrations actuelles."""
+        params = {
+            "latitude": self._lat,
+            "longitude": self._lon,
+            "hourly": ",".join(OPEN_METEO_VARS.keys()),
+            "forecast_days": "1",
+            "timezone": "Europe/Paris",
+        }
         try:
             async with self._session.get(
-                RECOSVANTE_URL, params=params, timeout=TIMEOUT
+                OPEN_METEO_URL, params=params, timeout=TIMEOUT
             ) as resp:
                 if resp.status != 200:
-                    raise PollenFranceApiError(
-                        f"Recosanté HTTP {resp.status}"
-                    )
+                    raise PollenFranceApiError(f"Open-Meteo HTTP {resp.status}")
                 data = await resp.json(content_type=None)
         except aiohttp.ClientError as err:
-            raise PollenFranceApiError(f"Recosanté réseau : {err}") from err
+            raise PollenFranceApiError(f"Open-Meteo réseau : {err}") from err
 
-        return self._parse_recosvante(data)
+        return self._parse_open_meteo(data)
 
-    def _parse_recosvante(self, data: dict) -> dict[str, Any]:
-        """Extrait les niveaux de pollen de la réponse Recosanté."""
+    def _parse_open_meteo(self, data: dict) -> dict[str, Any]:
+        """Extrait la valeur de l'heure courante pour chaque pollen."""
         result: dict[str, Any] = {}
+        hourly = data.get("hourly", {})
+        times = hourly.get("time", [])
 
-        # La réponse Recosanté contient un tableau "data" avec les indicateurs
-        indicators = data.get("data", [])
-        for item in indicators:
-            # On cherche l'indicateur pollen
-            label = str(item.get("label", "")).lower()
-            if "pollen" not in label and item.get("type") != "pollen":
+        # Heure courante Paris (format ISO sans secondes)
+        now_str = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:00")
+        # Cherche l'index le plus proche (heure courante ou dernière connue)
+        idx = None
+        for i, t in enumerate(times):
+            if t.startswith(now_str[:13]):
+                idx = i
+                break
+        if idx is None and times:
+            idx = len(times) - 1  # fallback : dernière valeur
+        if idx is None:
+            return result
+
+        for om_var, pollen_key in OPEN_METEO_VARS.items():
+            values = hourly.get(om_var, [])
+            if idx >= len(values):
+                continue
+            raw = values[idx]
+            if raw is None:
+                continue
+            try:
+                conc = float(raw)
+            except (ValueError, TypeError):
                 continue
 
-            # Sous-données par type de pollen
-            sub_values = item.get("values", [])
-            for sub in sub_values:
-                pollen_name_raw = str(sub.get("label", "")).lower()
-                # Normalisation des accents
-                pollen_name = self._normalize_name(pollen_name_raw)
-                mapped = RECOSVANTE_POLLEN_MAP.get(pollen_name)
-                if not mapped:
-                    # Essai direct
-                    for key in RECOSVANTE_POLLEN_MAP:
-                        if key in pollen_name or pollen_name in key:
-                            mapped = RECOSVANTE_POLLEN_MAP[key]
-                            break
-                if not mapped:
-                    continue
-
-                level = sub.get("value")
-                if level is None:
-                    level = sub.get("level")
-                if level is None:
-                    continue
-
-                try:
-                    level_int = int(level)
-                except (ValueError, TypeError):
-                    continue
-
-                result[mapped] = {
-                    "niveau": level_int,
-                    "risque": RISK_LEVELS.get(level_int, "Inconnu"),
-                    "source": "Recosanté (Atmo France)",
-                    "concentration_m3": None,
-                }
+            level = self._conc_to_level(pollen_key, conc, OPEN_METEO_THRESHOLDS)
+            result[pollen_key] = {
+                "niveau": level,
+                "risque": RISK_LEVELS.get(level, "Inconnu"),
+                "source": "Open-Meteo (CAMS)",
+                "concentration_m3": round(conc, 2),
+            }
 
         return result
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # SILAM THREDDS
-    # ─────────────────────────────────────────────────────────────────────────
+    # ── SILAM THREDDS ─────────────────────────────────────────────────────────
 
     async def _fetch_silam(self) -> dict[str, Any]:
-        """Interroge le THREDDS SILAM et retourne les concentrations."""
+        """Interroge SILAM THREDDS pollen v6.1."""
         now_utc = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:00:00Z")
-
-        params = {
-            "var": SILAM_VARS,
-            "latitude": self._latitude,
-            "longitude": self._longitude,
-            "time": now_utc,
-            "vertCoord": "0",
-            "accept": "csv",
-        }
-
+        params = [("var", v) for v in SILAM_VARS] + [
+            ("latitude", self._lat),
+            ("longitude", self._lon),
+            ("time", now_utc),
+            ("accept", "csv"),
+        ]
         try:
             async with self._session.get(
                 SILAM_BASE_URL, params=params, timeout=TIMEOUT
             ) as resp:
                 if resp.status != 200:
-                    raise PollenFranceApiError(
-                        f"SILAM HTTP {resp.status}"
-                    )
+                    raise PollenFranceApiError(f"SILAM HTTP {resp.status}")
                 text = await resp.text()
         except aiohttp.ClientError as err:
             raise PollenFranceApiError(f"SILAM réseau : {err}") from err
@@ -172,103 +152,82 @@ class PollenFranceApi:
         return self._parse_silam(text)
 
     def _parse_silam(self, csv_text: str) -> dict[str, Any]:
-        """Parse le CSV SILAM et retourne les concentrations par type."""
+        """Parse le CSV SILAM — prend la première ligne (altitude la plus basse)."""
         result: dict[str, Any] = {}
-
+        if not csv_text.strip():
+            return result
         try:
             reader = csv.DictReader(io.StringIO(csv_text))
             rows = list(reader)
         except Exception as err:  # noqa: BLE001
-            _LOGGER.warning("SILAM CSV parse error: %s", err)
+            _LOGGER.warning("SILAM CSV parse error : %s", err)
             return result
 
         if not rows:
             return result
 
-        # Prendre la dernière ligne (données les plus récentes)
-        row = rows[-1]
+        # Première ligne = altitude la plus basse (sol, ~12.5 m)
+        row = rows[0]
 
-        for var, pollen_key in SILAM_VAR_NAMES.items():
-            # Le nom de colonne dans le CSV peut varier légèrement
+        for silam_var, pollen_key in SILAM_VARS.items():
             value = None
             for col in row:
-                if var.lower() in col.lower():
+                if silam_var in col:
                     value = row[col]
                     break
-
             if value is None:
                 continue
-
             try:
                 conc = float(value)
             except (ValueError, TypeError):
                 continue
 
-            # Conversion en niveau 0-5
-            level = self._concentration_to_level(pollen_key, conc)
-
+            level = self._conc_to_level(pollen_key, conc, SILAM_THRESHOLDS)
             result[pollen_key] = {
                 "niveau": level,
                 "risque": RISK_LEVELS.get(level, "Inconnu"),
                 "source": "SILAM (FMI)",
-                "concentration_m3": round(conc, 2),
+                "concentration_m3": round(conc, 4),
             }
 
         return result
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # Fusion des deux sources
-    # ─────────────────────────────────────────────────────────────────────────
+    # ── Fusion ────────────────────────────────────────────────────────────────
 
     def _merge(
         self,
-        recosvante: dict[str, Any],
+        open_meteo: dict[str, Any],
         silam: dict[str, Any],
     ) -> dict[str, Any]:
-        """Fusionne les données : Recosanté prioritaire, SILAM en complément."""
+        """Open-Meteo prioritaire pour les 6 types communs, SILAM pour noisetier."""
         merged: dict[str, Any] = {}
 
-        # Tous les pollens connus des deux sources
-        all_keys = set(recosvante.keys()) | set(silam.keys())
-
-        for key in all_keys:
-            if key in recosvante:
-                entry = dict(recosvante[key])
-                # Ajoute la concentration SILAM si disponible
-                if key in silam and silam[key].get("concentration_m3") is not None:
-                    entry["concentration_m3"] = silam[key]["concentration_m3"]
-                merged[key] = entry
-            elif key in silam:
-                merged[key] = dict(silam[key])
+        # Tous les types connus
+        for key in set(open_meteo) | set(silam):
+            if key in open_meteo:
+                entry = dict(open_meteo[key])
+                # Enrichit avec la concentration SILAM si disponible
+                if key in silam:
+                    entry["concentration_m3_silam"] = silam[key].get("concentration_m3")
+            else:
+                entry = dict(silam[key])
+            merged[key] = entry
 
         return merged
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # Utilitaires
-    # ─────────────────────────────────────────────────────────────────────────
+    # ── Utilitaire ────────────────────────────────────────────────────────────
 
     @staticmethod
-    def _normalize_name(name: str) -> str:
-        """Supprime les accents courants pour normaliser les noms."""
-        replacements = {
-            "é": "e", "è": "e", "ê": "e", "ë": "e",
-            "à": "a", "â": "a", "ä": "a",
-            "ô": "o", "ö": "o",
-            "ù": "u", "û": "u", "ü": "u",
-            "î": "i", "ï": "i",
-            "ç": "c",
-        }
-        for accented, plain in replacements.items():
-            name = name.replace(accented, plain)
-        return name
-
-    @staticmethod
-    def _concentration_to_level(pollen_key: str, conc: float) -> int:
-        """Convertit une concentration (p/m³) en niveau de risque 0-5."""
-        thresholds = SILAM_THRESHOLDS.get(pollen_key, [0, 10, 50, 150, 500])
+    def _conc_to_level(
+        pollen_key: str,
+        conc: float,
+        thresholds: dict[str, list[float]],
+    ) -> int:
+        """Convertit une concentration (grains/m³) en niveau de risque 0-5."""
         if conc <= 0:
             return 0
-        for i, threshold in enumerate(reversed(thresholds)):
-            if conc >= threshold:
-                return len(thresholds) - i
-        return 1
+        seuils = thresholds.get(pollen_key, [1, 10, 30, 100, 300])
+        for level, seuil in enumerate(seuils, start=1):
+            if conc < seuil:
+                return level - 1
+        return 5

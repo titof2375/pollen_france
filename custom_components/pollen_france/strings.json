@@ -3,21 +3,19 @@
     "step": {
       "user": {
         "title": "Pollen France",
-        "description": "Entrez le code INSEE de votre commune (5 chiffres, ex: 87085 pour Limoges).\nLa latitude/longitude est pré-remplie depuis votre configuration Home Assistant.",
+        "description": "La latitude/longitude est pré-remplie depuis votre configuration Home Assistant.",
         "data": {
-          "insee": "Code INSEE de la commune",
           "latitude": "Latitude",
           "longitude": "Longitude"
         }
       }
     },
     "error": {
-      "invalid_insee": "Le code INSEE doit être composé de 5 chiffres.",
-      "cannot_connect": "Impossible de se connecter à l'API. Vérifiez votre connexion internet.",
+      "cannot_connect": "Impossible de se connecter aux API. Vérifiez votre connexion internet.",
       "unknown": "Erreur inattendue. Consultez les journaux pour plus de détails."
     },
     "abort": {
-      "already_configured": "Cette commune est déjà configurée."
+      "already_configured": "Cette localisation est déjà configurée."
     }
   }
 }

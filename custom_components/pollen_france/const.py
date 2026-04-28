@@ -6,57 +6,39 @@ CONF_INSEE = "insee"
 CONF_LATITUDE = "latitude"
 CONF_LONGITUDE = "longitude"
 
-# Update interval in hours
 UPDATE_INTERVAL_HOURS = 3
 
-# ── Recosanté API (Atmo France officiel) ──────────────────────────────────────
-RECOSVANTE_URL = "https://api.recosante.beta.gouv.fr/v1/"
+# ── Open-Meteo Air Quality (CAMS/Copernicus, gratuit, sans clé) ───────────────
+OPEN_METEO_URL = "https://air-quality-api.open-meteo.com/v1/air-quality"
 
-# ── SILAM THREDDS (FMI, données scientifiques supplémentaires) ────────────────
+# Variables Open-Meteo → clé normalisée
+OPEN_METEO_VARS = {
+    "alder_pollen":   "aulne",
+    "birch_pollen":   "bouleau",
+    "grass_pollen":   "graminees",
+    "mugwort_pollen": "armoise",
+    "olive_pollen":   "olivier",
+    "ragweed_pollen": "ambroisie",
+}
+
+# ── SILAM THREDDS pollen v6.1 (FMI, gratuit, sans clé) ───────────────────────
 SILAM_BASE_URL = (
     "https://thredds.silam.fmi.fi/thredds/ncss/grid"
-    "/silam_europe_v5_9_1/silam_europe_v5_9_1_best.ncd"
+    "/silam_europe_pollen_v6_1/silam_europe_pollen_v6_1_best.ncd"
 )
 
-# Variables SILAM disponibles (concentration en particules/m³)
-SILAM_VARS = [
-    "cnc_BIRCH_m22",     # Bouleau
-    "cnc_ALDER_m22",     # Aulne
-    "cnc_GRASS_m22",     # Graminées
-    "cnc_OLIVE_m22",     # Olivier
-    "cnc_RAGWEED_m22",   # Ambroisie
-    "cnc_MUGWORT_m22",   # Armoise
-]
-
-# Mapping variable SILAM → nom lisible
-SILAM_VAR_NAMES = {
-    "cnc_BIRCH_m22": "bouleau",
-    "cnc_ALDER_m22": "aulne",
-    "cnc_GRASS_m22": "graminees",
-    "cnc_OLIVE_m22": "olivier",
-    "cnc_RAGWEED_m22": "ambroisie",
-    "cnc_MUGWORT_m22": "armoise",
+# Variables SILAM → clé normalisée
+SILAM_VARS = {
+    "cnc_POLLEN_HAZEL_m23":   "noisetier",   # unique à SILAM
+    "cnc_POLLEN_BIRCH_m22":   "bouleau",
+    "cnc_POLLEN_ALDER_m22":   "aulne",
+    "cnc_POLLEN_GRASS_m32":   "graminees",
+    "cnc_POLLEN_MUGWORT_m18": "armoise",
+    "cnc_POLLEN_OLIVE_m20":   "olivier",
+    "cnc_POLLEN_RAGWEED_m18": "ambroisie",
 }
 
-# Mapping source Recosanté → clé normalisée
-RECOSVANTE_POLLEN_MAP = {
-    "graminees": "graminees",
-    "bouleau": "bouleau",
-    "aulne": "aulne",
-    "armoise": "armoise",
-    "ambroisie": "ambroisie",
-    "olivier": "olivier",
-    "noisetier": "noisetier",
-    "platane": "platane",
-    "chene": "chene",
-    "frene": "frene",
-    "peuplier": "peuplier",
-    "charme": "charme",
-    "cypres": "cypres",
-    "urticacees": "urticacees",
-}
-
-# Niveaux de risque pollen (0-5)
+# Niveaux de risque (0-5)
 RISK_LEVELS = {
     0: "Nul",
     1: "Très faible",
@@ -66,20 +48,22 @@ RISK_LEVELS = {
     5: "Très élevé",
 }
 
-# Seuils SILAM → niveau risque (particules/m³)
-# Basés sur les seuils EAN (European Aeroallergen Network)
-SILAM_THRESHOLDS = {
-    "bouleau": [0, 10, 80, 200, 1500],     # p/m³
-    "aulne": [0, 10, 50, 200, 1000],
-    "graminees": [0, 10, 30, 50, 150],
-    "olivier": [0, 10, 50, 200, 500],
-    "ambroisie": [0, 5, 10, 30, 100],
-    "armoise": [0, 10, 30, 100, 300],
+# Seuils SILAM grains/m³ → niveau 1-5 (EAN / SILAM index)
+# [seuil_lvl1, lvl2, lvl3, lvl4, lvl5]
+SILAM_THRESHOLDS: dict[str, list[float]] = {
+    "bouleau":   [1,   10,  80,  200, 1500],
+    "aulne":     [1,   10,  50,  200, 1000],
+    "graminees": [1,   10,  30,   50,  150],
+    "noisetier": [1,   10,  50,  150,  500],
+    "armoise":   [1,   10,  30,  100,  300],
+    "olivier":   [1,   10,  50,  200,  500],
+    "ambroisie": [0.5,  5,  10,   30,  100],
 }
 
-# Attributs de données
-ATTR_LEVEL = "niveau"
-ATTR_RISK = "risque"
-ATTR_SOURCE = "source"
-ATTR_UPDATED = "mis_a_jour"
+# Seuils Open-Meteo grains/m³ → niveau 1-5 (mêmes références EAN)
+OPEN_METEO_THRESHOLDS = SILAM_THRESHOLDS
+
+# Attributs supplémentaires des capteurs
+ATTR_RISK          = "risque"
+ATTR_SOURCE        = "source"
 ATTR_CONCENTRATION = "concentration_m3"

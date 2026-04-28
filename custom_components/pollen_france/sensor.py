@@ -1,68 +1,39 @@
-"""Capteurs pollen pour l'intégration Pollen France."""
+"""Capteurs pollen pour Pollen France."""
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 
-from homeassistant.components.sensor import (
-    SensorEntity,
-    SensorEntityDescription,
-    SensorStateClass,
-)
+from homeassistant.components.sensor import SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import (
-    DOMAIN,
-    CONF_INSEE,
-    ATTR_LEVEL,
-    ATTR_RISK,
-    ATTR_SOURCE,
-    ATTR_CONCENTRATION,
-    RISK_LEVELS,
-)
+from .const import DOMAIN, CONF_LATITUDE, CONF_LONGITUDE, ATTR_RISK, ATTR_SOURCE, ATTR_CONCENTRATION
 from .coordinator import PollenFranceCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-# Noms lisibles pour chaque type de pollen
 POLLEN_LABELS: dict[str, str] = {
     "graminees": "Graminées",
-    "bouleau": "Bouleau",
-    "aulne": "Aulne",
-    "armoise": "Armoise",
-    "ambroisie": "Ambroisie",
-    "olivier": "Olivier",
+    "bouleau":   "Bouleau",
+    "aulne":     "Aulne",
     "noisetier": "Noisetier",
-    "platane": "Platane",
-    "chene": "Chêne",
-    "frene": "Frêne",
-    "peuplier": "Peuplier",
-    "charme": "Charme",
-    "cypres": "Cyprès",
-    "urticacees": "Urticacées",
+    "armoise":   "Armoise",
+    "ambroisie": "Ambroisie",
+    "olivier":   "Olivier",
 }
 
-# Icônes par type de pollen
 POLLEN_ICONS: dict[str, str] = {
     "graminees": "mdi:grass",
-    "bouleau": "mdi:tree",
-    "aulne": "mdi:tree-outline",
-    "armoise": "mdi:flower-pollen",
-    "ambroisie": "mdi:flower-pollen-outline",
-    "olivier": "mdi:olive",
+    "bouleau":   "mdi:tree",
+    "aulne":     "mdi:tree-outline",
     "noisetier": "mdi:tree",
-    "platane": "mdi:tree",
-    "chene": "mdi:tree",
-    "frene": "mdi:tree-outline",
-    "peuplier": "mdi:tree",
-    "charme": "mdi:tree-outline",
-    "cypres": "mdi:pine-tree",
-    "urticacees": "mdi:flower-pollen",
+    "armoise":   "mdi:flower-pollen",
+    "ambroisie": "mdi:flower-pollen-outline",
+    "olivier":   "mdi:olive",
 }
 
 
@@ -71,24 +42,17 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Crée les capteurs pollen à partir d'une entrée de configuration."""
+    """Crée les capteurs pollen."""
     coordinator: PollenFranceCoordinator = hass.data[DOMAIN][entry.entry_id]
-    insee = entry.data[CONF_INSEE]
+    lat = entry.data[CONF_LATITUDE]
+    lon = entry.data[CONF_LONGITUDE]
 
-    # Attendre le premier refresh pour connaître les types disponibles
     await coordinator.async_config_entry_first_refresh()
 
-    entities: list[PollenSensor] = []
-    for pollen_key in coordinator.data or {}:
-        entities.append(
-            PollenSensor(
-                coordinator=coordinator,
-                pollen_key=pollen_key,
-                insee=insee,
-                entry_id=entry.entry_id,
-            )
-        )
-
+    entities = [
+        PollenSensor(coordinator=coordinator, pollen_key=key, lat=lat, lon=lon, entry_id=entry.entry_id)
+        for key in coordinator.data or {}
+    ]
     async_add_entities(entities)
 
 
@@ -102,19 +66,19 @@ class PollenSensor(CoordinatorEntity[PollenFranceCoordinator], SensorEntity):
         self,
         coordinator: PollenFranceCoordinator,
         pollen_key: str,
-        insee: str,
+        lat: float,
+        lon: float,
         entry_id: str,
     ) -> None:
         super().__init__(coordinator)
         self._pollen_key = pollen_key
-        self._insee = insee
-        self._attr_unique_id = f"pollen_france_{insee}_{pollen_key}"
+        self._attr_unique_id = f"pollen_france_{lat:.4f}_{lon:.4f}_{pollen_key}"
         self._attr_name = POLLEN_LABELS.get(pollen_key, pollen_key.capitalize())
         self._attr_icon = POLLEN_ICONS.get(pollen_key, "mdi:flower-pollen")
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"pollen_france_{insee}")},
-            name=f"Pollen France {insee}",
-            manufacturer="Recosanté / SILAM (FMI)",
+            identifiers={(DOMAIN, f"pollen_france_{lat:.4f}_{lon:.4f}")},
+            name=f"Pollen France ({lat:.2f}, {lon:.2f})",
+            manufacturer="Open-Meteo / SILAM (FMI)",
             model="Pollen monitoring",
             entry_type="service",
         )
@@ -127,26 +91,25 @@ class PollenSensor(CoordinatorEntity[PollenFranceCoordinator], SensorEntity):
 
     @property
     def native_value(self) -> int | None:
-        """Retourne le niveau de risque (0-5)."""
         if self._data is None:
             return None
         return self._data.get("niveau")
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Attributs supplémentaires."""
         if self._data is None:
             return {}
-        return {
-            ATTR_RISK: self._data.get("risque"),
-            ATTR_SOURCE: self._data.get("source"),
+        attrs: dict[str, Any] = {
+            ATTR_RISK:          self._data.get("risque"),
+            ATTR_SOURCE:        self._data.get("source"),
             ATTR_CONCENTRATION: self._data.get("concentration_m3"),
-            "insee": self._insee,
         }
+        if "concentration_m3_silam" in self._data:
+            attrs["concentration_m3_silam"] = self._data["concentration_m3_silam"]
+        return attrs
 
     @property
     def available(self) -> bool:
-        """Disponible si le coordinateur a des données pour ce pollen."""
         return (
             super().available
             and self.coordinator.data is not None
