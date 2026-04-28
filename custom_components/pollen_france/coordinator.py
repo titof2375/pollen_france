@@ -11,7 +11,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import PollenFranceApi, PollenFranceApiError
-from .const import DOMAIN, CONF_LATITUDE, CONF_LONGITUDE, CONF_TRACKER, UPDATE_INTERVAL_MINUTES
+from .const import DOMAIN, UPDATE_INTERVAL_MINUTES
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -22,10 +22,12 @@ class PollenFranceCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def __init__(
         self,
         hass: HomeAssistant,
+        name: str,
         latitude: float,
         longitude: float,
         tracker: str | None = None,
     ) -> None:
+        self.instance_name = name
         self._default_lat = latitude
         self._default_lon = longitude
         self._tracker = tracker
@@ -33,12 +35,12 @@ class PollenFranceCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         super().__init__(
             hass,
             _LOGGER,
-            name=f"{DOMAIN}_{tracker or f'{latitude:.4f}_{longitude:.4f}'}",
+            name=f"{DOMAIN}_{name}",
             update_interval=timedelta(minutes=UPDATE_INTERVAL_MINUTES),
         )
 
     def _get_location(self) -> tuple[float, float]:
-        """Retourne lat/lon : depuis le tracker si défini, sinon position fixe."""
+        """Retourne lat/lon depuis le tracker ou la position fixe."""
         if self._tracker:
             state = self.hass.states.get(self._tracker)
             if state:
@@ -57,7 +59,6 @@ class PollenFranceCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         return self._default_lat, self._default_lon
 
     async def _async_update_data(self) -> dict[str, Any]:
-        """Récupère les données pollen pour la position courante."""
         lat, lon = self._get_location()
         session: aiohttp.ClientSession = async_get_clientsession(self.hass)
         api = PollenFranceApi(session=session, latitude=lat, longitude=lon)
@@ -70,5 +71,4 @@ class PollenFranceCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             _LOGGER.warning(
                 "Aucune donnée pollen récupérée (lat=%.4f, lon=%.4f)", lat, lon
             )
-
         return data

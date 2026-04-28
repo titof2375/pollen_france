@@ -47,6 +47,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     coordinator = PollenFranceCoordinator(
         hass=hass,
+        name=entry.data.get(CONF_NAME, entry.title),
         latitude=entry.data[CONF_LATITUDE],
         longitude=entry.data[CONF_LONGITUDE],
         tracker=entry.data.get(CONF_TRACKER),

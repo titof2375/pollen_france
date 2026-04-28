@@ -11,7 +11,7 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, CONF_LATITUDE, CONF_LONGITUDE, ATTR_RISK, ATTR_SOURCE, ATTR_CONCENTRATION
+from .const import DOMAIN, CONF_NAME, ATTR_RISK, ATTR_SOURCE, ATTR_CONCENTRATION
 from .coordinator import PollenFranceCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -42,15 +42,18 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Crée les capteurs pollen."""
     coordinator: PollenFranceCoordinator = hass.data[DOMAIN][entry.entry_id]
-    lat = entry.data[CONF_LATITUDE]
-    lon = entry.data[CONF_LONGITUDE]
+    instance_name = entry.data.get(CONF_NAME, entry.title)
 
     await coordinator.async_config_entry_first_refresh()
 
     entities = [
-        PollenSensor(coordinator=coordinator, pollen_key=key, lat=lat, lon=lon, entry_id=entry.entry_id)
+        PollenSensor(
+            coordinator=coordinator,
+            pollen_key=key,
+            instance_name=instance_name,
+            entry_id=entry.entry_id,
+        )
         for key in coordinator.data or {}
     ]
     async_add_entities(entities)
@@ -66,18 +69,18 @@ class PollenSensor(CoordinatorEntity[PollenFranceCoordinator], SensorEntity):
         self,
         coordinator: PollenFranceCoordinator,
         pollen_key: str,
-        lat: float,
-        lon: float,
+        instance_name: str,
         entry_id: str,
     ) -> None:
         super().__init__(coordinator)
         self._pollen_key = pollen_key
-        self._attr_unique_id = f"pollen_france_{lat:.4f}_{lon:.4f}_{pollen_key}"
+        # Unique_id basé sur entry_id → pas de conflit entre instances
+        self._attr_unique_id = f"{entry_id}_{pollen_key}"
         self._attr_name = POLLEN_LABELS.get(pollen_key, pollen_key.capitalize())
         self._attr_icon = POLLEN_ICONS.get(pollen_key, "mdi:flower-pollen")
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"pollen_france_{lat:.4f}_{lon:.4f}")},
-            name=f"Pollen France ({lat:.2f}, {lon:.2f})",
+            identifiers={(DOMAIN, entry_id)},
+            name=instance_name,
             manufacturer="Open-Meteo / SILAM (FMI)",
             model="Pollen monitoring",
             entry_type="service",
