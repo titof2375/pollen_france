@@ -1,7 +1,7 @@
 {
   "name": "Pollen France",
   "content_in_root": false,
-  "render_readme": false,
+  "render_readme": true,
   "filename": "pollen_france.zip",
   "country": ["FR"]
 }
