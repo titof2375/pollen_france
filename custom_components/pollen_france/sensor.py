@@ -47,6 +47,11 @@ async def async_setup_entry(
 
     await coordinator.async_config_entry_first_refresh()
 
+    # FIX: on crée TOUJOURS les 7 capteurs connus, quel que soit le contenu
+    # du premier refresh. Si l'API a échoué/été rate-limitée au démarrage
+    # (coordinator.data == {}), les entités existent quand même et passent
+    # simplement à "unavailable" via PollenSensor.available, au lieu de ne
+    # jamais être créées du tout.
     entities = [
         PollenSensor(
             coordinator=coordinator,
@@ -54,7 +59,7 @@ async def async_setup_entry(
             instance_name=instance_name,
             entry_id=entry.entry_id,
         )
-        for key in coordinator.data or {}
+        for key in POLLEN_LABELS
     ]
     async_add_entities(entities)
 
