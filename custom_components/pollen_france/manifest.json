@@ -1,7 +1,7 @@
 {
   "domain": "pollen_france",
   "name": "Pollen France",
-  "version": "2.2.1",
+  "version": "2.2.3",
   "config_flow": true,
   "documentation": "https://github.com/titof2375/pollen_france",
   "issue_tracker": "https://github.com/titof2375/pollen_france/issues",
