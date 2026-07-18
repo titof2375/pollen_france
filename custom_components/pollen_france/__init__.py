@@ -1,85 +1,75 @@
-"""Intégration Météo Dynamique (Météo-France) - suit la position GPS d'un tracker/personne."""
+"""Intégration Pollen France.
+
+Sources : Open-Meteo (CAMS) + SILAM THREDDS v6.1 (FMI)
+Position : fixe (lat/lon) ou dynamique (person / device_tracker)
+"""
 from __future__ import annotations
 
+import logging
+
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
 from .const import (
-    CONF_NAME,
-    CONF_SCAN_INTERVAL,
-    CONF_TRACKER_ENTITY,
-    DATA_ALERT,
-    DATA_RAIN,
-    DATA_WEATHER,
-    DEFAULT_SCAN_INTERVAL_MINUTES,
     DOMAIN,
+    CONF_NAME,
+    CONF_LATITUDE,
+    CONF_LONGITUDE,
+    CONF_TRACKER,
+    CONF_SCAN_INTERVAL,
+    UPDATE_INTERVAL_MINUTES,
 )
-from .coordinator import (
-    MeteoDynamiqueAlertCoordinator,
-    MeteoDynamiqueCoordinator,
-    MeteoDynamiqueRainCoordinator,
-)
+from .coordinator import PollenFranceCoordinator
 
-PLATFORMS = ["weather", "sensor"]
+_LOGGER = logging.getLogger(__name__)
+
+PLATFORMS: list[Platform] = [Platform.SENSOR]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    scan_interval = entry.options.get(
-        CONF_SCAN_INTERVAL, entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL_MINUTES)
-    )
-    tracker_entity = entry.data[CONF_TRACKER_ENTITY]
-    name = entry.data[CONF_NAME]
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Migration des anciennes entrées vers le schéma actuel."""
+    _LOGGER.debug("Migration Pollen France : v%s → v3", entry.version)
 
-    # 1) Météo générale (weather.*) : chargée en premier, car le département de la
-    #    vigilance est déduit de sa donnée "position.dept".
-    weather_coordinator = MeteoDynamiqueCoordinator(
-        hass,
-        tracker_entity=tracker_entity,
-        name=name,
-        scan_interval_minutes=scan_interval,
-    )
-    await weather_coordinator.async_config_entry_first_refresh()
+    new_data = dict(entry.data)
 
-    # 2) Pluie dans l'heure : même position GPS, rafraîchissement plus fréquent.
-    rain_coordinator = MeteoDynamiqueRainCoordinator(
-        hass,
-        tracker_entity=tracker_entity,
-        name=name,
-    )
-    await rain_coordinator.async_config_entry_first_refresh()
+    # v1 avait un champ INSEE, on le supprime et on garde lat/lon
+    new_data.pop("insee", None)
 
-    # 3) Vigilance météo : département recalculé à chaque update à partir de la
-    #    dernière position connue du coordinator météo (donc suit la même personne).
-    def _get_department() -> str | None:
-        position = (weather_coordinator.data or {}).get("position") or {}
-        return position.get("dept")
+    # ajout des champs manquants
+    new_data.setdefault(CONF_TRACKER, None)
+    new_data.setdefault(CONF_SCAN_INTERVAL, UPDATE_INTERVAL_MINUTES)
+    new_data.setdefault(CONF_NAME, f"Pollen France ({new_data.get(CONF_LATITUDE, ''):.2f}, {new_data.get(CONF_LONGITUDE, ''):.2f})")
 
-    alert_coordinator = MeteoDynamiqueAlertCoordinator(
-        hass,
-        name=name,
-        get_department=_get_department,
-    )
-    await alert_coordinator.async_config_entry_first_refresh()
+    # lat/lon obligatoires : fallback sur la position HA si absents
+    if CONF_LATITUDE not in new_data:
+        new_data[CONF_LATITUDE] = hass.config.latitude
+    if CONF_LONGITUDE not in new_data:
+        new_data[CONF_LONGITUDE] = hass.config.longitude
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
-        DATA_WEATHER: weather_coordinator,
-        DATA_RAIN: rain_coordinator,
-        DATA_ALERT: alert_coordinator,
-    }
-
-    entry.async_on_unload(entry.add_update_listener(_async_update_listener))
-
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    hass.config_entries.async_update_entry(entry, data=new_data, version=3)
     return True
 
 
-async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Recharge l'entrée si les options (intervalle) changent."""
-    await hass.config_entries.async_reload(entry.entry_id)
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    hass.data.setdefault(DOMAIN, {})
+
+    coordinator = PollenFranceCoordinator(
+        hass=hass,
+        name=entry.data.get(CONF_NAME, entry.title),
+        latitude=entry.data[CONF_LATITUDE],
+        longitude=entry.data[CONF_LONGITUDE],
+        tracker=entry.data.get(CONF_TRACKER),
+        scan_interval_minutes=entry.data.get(CONF_SCAN_INTERVAL, UPDATE_INTERVAL_MINUTES),
+    )
+
+    hass.data[DOMAIN][entry.entry_id] = coordinator
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
+        hass.data[DOMAIN].pop(entry.entry_id, None)
     return unload_ok
