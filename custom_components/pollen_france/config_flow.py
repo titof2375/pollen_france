@@ -38,14 +38,15 @@ class PollenFranceConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             name    = user_input[CONF_NAME].strip()
             tracker = user_input.get(CONF_TRACKER) or None
-            lat     = user_input[CONF_LATITUDE]
-            lon     = user_input[CONF_LONGITUDE]
+            lat     = user_input.get(CONF_LATITUDE)
+            lon     = user_input.get(CONF_LONGITUDE)
             scan_interval = user_input.get(CONF_SCAN_INTERVAL, UPDATE_INTERVAL_MINUTES)
 
             if not name:
                 errors[CONF_NAME] = "name_required"
             else:
-                # Lecture de la position du tracker si disponible
+                # Lecture de la position du tracker si disponible : prioritaire
+                # sur toute coordonnée manuelle saisie.
                 if tracker:
                     state = self.hass.states.get(tracker)
                     if state:
@@ -57,6 +58,13 @@ class PollenFranceConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                                 lon = float(t_lon)
                             except (ValueError, TypeError):
                                 pass
+
+                # Ni tracker ni coordonnées manuelles : on retombe sur la
+                # position de la HA elle-même (jamais bloquant).
+                if lat is None:
+                    lat = self.hass.config.latitude
+                if lon is None:
+                    lon = self.hass.config.longitude
 
                 session = async_get_clientsession(self.hass)
                 api = PollenFranceApi(session=session, latitude=lat, longitude=lon)
@@ -93,14 +101,8 @@ class PollenFranceConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         }
                     }
                 ),
-                vol.Optional(
-                    CONF_LATITUDE,
-                    default=self.hass.config.latitude,
-                ): vol.Coerce(float),
-                vol.Optional(
-                    CONF_LONGITUDE,
-                    default=self.hass.config.longitude,
-                ): vol.Coerce(float),
+                vol.Optional(CONF_LATITUDE): vol.Coerce(float),
+                vol.Optional(CONF_LONGITUDE): vol.Coerce(float),
                 vol.Optional(
                     CONF_SCAN_INTERVAL,
                     default=UPDATE_INTERVAL_MINUTES,
