@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Pollen France",
-        "description": "Donnez un nom à cette instance (ex: Maison, Christophe, Vacances...).",
+        "description": "Donnez un nom à cette instance (ex: Maison, Christophe, Vacances...). Latitude/longitude ne servent que si vous ne renseignez pas de tracker GPS.",
         "data": {
           "name": "Nom",
           "tracker": "Personne ou téléphone à suivre (optionnel)",
