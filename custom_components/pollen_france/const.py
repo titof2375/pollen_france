@@ -6,8 +6,9 @@ CONF_NAME      = "name"
 CONF_LATITUDE  = "latitude"
 CONF_LONGITUDE = "longitude"
 CONF_TRACKER   = "tracker"        # entité person/device_tracker (optionnel)
+CONF_SCAN_INTERVAL = "scan_interval"  # intervalle de rafraîchissement en minutes (optionnel)
 
-UPDATE_INTERVAL_MINUTES = 60      # refresh toutes les heures
+UPDATE_INTERVAL_MINUTES = 60      # refresh toutes les heures (valeur par défaut)
 
 # ── Open-Meteo Air Quality (CAMS/Copernicus, gratuit, sans clé) ───────────────
 OPEN_METEO_URL = "https://air-quality-api.open-meteo.com/v1/air-quality"
