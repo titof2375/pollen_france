@@ -54,6 +54,7 @@ Aucune clé API requise. Données gratuites et libres.
 | Latitude | ✅ | Pré-remplie avec la position de votre HA |
 | Longitude | ✅ | Pré-remplie avec la position de votre HA |
 | Tracker GPS | ❌ | Entité `person` ou `device_tracker` pour localisation dynamique |
+| Intervalle de rafraîchissement | ❌ | En minutes, 60 par défaut (minimum 5) |
 
 ---
 
@@ -91,6 +92,7 @@ Seuils basés sur les recommandations du **Réseau Européen d'Aéroallergologie
 
 | Version | Notes |
 |---------|-------|
+| 2.4.0 | Intervalle de rafraîchissement configurable (`scan_interval`) |
 | 2.3.0 | Nouveaux attributs `tracker_entity`, `latitude_suivie`, `longitude_suivie` pour vérifier le suivi GPS |
 | 2.2.3 | Correctifs mineurs |
 | 2.2.2 | Correctifs mineurs |
