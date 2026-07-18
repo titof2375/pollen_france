@@ -91,7 +91,8 @@ Seuils basés sur les recommandations du **Réseau Européen d'Aéroallergologie
 
 | Version | Notes |
 |---------|-------|
-| 2.4.1 | Latitude/longitude vraiment optionnelles dans le formulaire (n'apparaissent plus pré-remplies comme si obligatoires) quand un tracker GPS est utilisé |
+| 2.4.2 | Fix réel de la 2.4.1 (le correctif n'avait pas été appliqué) : latitude/longitude sont désormais vraiment optionnelles dans le formulaire |
+| 2.4.1 | (retiré — correctif incomplet) |
 | 2.4.0 | Intervalle de rafraîchissement configurable (`scan_interval`) |
 | 2.3.0 | Nouveaux attributs `tracker_entity`, `latitude_suivie`, `longitude_suivie` pour vérifier le suivi GPS |
 | 2.2.3 | Correctifs mineurs |
