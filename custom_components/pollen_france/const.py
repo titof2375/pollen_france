@@ -63,3 +63,6 @@ OPEN_METEO_THRESHOLDS = SILAM_THRESHOLDS
 ATTR_RISK          = "risque"
 ATTR_SOURCE        = "source"
 ATTR_CONCENTRATION = "concentration_m3"
+ATTR_TRACKER        = "tracker_entity"
+ATTR_LATITUDE_USED  = "latitude_suivie"
+ATTR_LONGITUDE_USED = "longitude_suivie"
