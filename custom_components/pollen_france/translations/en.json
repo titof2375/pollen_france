@@ -2,27 +2,24 @@
   "config": {
     "step": {
       "user": {
-        "title": "Météo Dynamique - New tracked position",
-        "description": "Adds an instance that recomputes weather (Météo-France) from the current GPS position of the chosen person, tracker or zone. Add one instance per person to track, plus one for home (zone.home) if needed.",
+        "title": "Pollen France",
+        "description": "Give a name to this instance (e.g. Home, Christophe, Holidays...).",
         "data": {
-          "name": "Name (e.g. Weather Christophe, Weather Home)",
-          "tracker_entity": "Person, tracker or zone to follow",
+          "name": "Name",
+          "tracker": "Person or phone to track (optional)",
+          "latitude": "Latitude (default fixed location)",
+          "longitude": "Longitude (default fixed location)",
           "scan_interval": "Refresh interval (minutes)"
         }
       }
     },
+    "error": {
+      "name_required": "Name is required.",
+      "cannot_connect": "Cannot connect to APIs. Check your internet connection.",
+      "unknown": "Unexpected error. Check the logs for details."
+    },
     "abort": {
-      "already_configured": "This entity is already tracked by an existing instance."
-    }
-  },
-  "options": {
-    "step": {
-      "init": {
-        "title": "Options - Météo Dynamique",
-        "data": {
-          "scan_interval": "Refresh interval (minutes)"
-        }
-      }
+      "already_configured": "This instance is already configured."
     }
   }
 }
