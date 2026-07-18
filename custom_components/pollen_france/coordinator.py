@@ -26,6 +26,7 @@ class PollenFranceCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         latitude: float,
         longitude: float,
         tracker: str | None = None,
+        scan_interval_minutes: int = UPDATE_INTERVAL_MINUTES,
     ) -> None:
         self.instance_name = name
         self._default_lat = latitude
@@ -40,7 +41,7 @@ class PollenFranceCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             hass,
             _LOGGER,
             name=f"{DOMAIN}_{name}",
-            update_interval=timedelta(minutes=UPDATE_INTERVAL_MINUTES),
+            update_interval=timedelta(minutes=scan_interval_minutes),
         )
 
     @property
