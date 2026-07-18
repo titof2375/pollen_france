@@ -31,6 +31,10 @@ class PollenFranceCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._default_lat = latitude
         self._default_lon = longitude
         self._tracker = tracker
+        # Dernière position effectivement utilisée (tracker ou position fixe),
+        # exposée aux entités pour affichage/diagnostic (cf. sensor.py).
+        self.last_latitude: float = latitude
+        self.last_longitude: float = longitude
 
         super().__init__(
             hass,
@@ -38,6 +42,11 @@ class PollenFranceCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             name=f"{DOMAIN}_{name}",
             update_interval=timedelta(minutes=UPDATE_INTERVAL_MINUTES),
         )
+
+    @property
+    def tracker(self) -> str | None:
+        """Entité person/device_tracker suivie, ou None si position fixe."""
+        return self._tracker
 
     def _get_location(self) -> tuple[float, float]:
         """Retourne lat/lon depuis le tracker ou la position fixe."""
@@ -60,6 +69,7 @@ class PollenFranceCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def _async_update_data(self) -> dict[str, Any]:
         lat, lon = self._get_location()
+        self.last_latitude, self.last_longitude = lat, lon
         session: aiohttp.ClientSession = async_get_clientsession(self.hass)
         api = PollenFranceApi(session=session, latitude=lat, longitude=lon)
         try:
