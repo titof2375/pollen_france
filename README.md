@@ -31,6 +31,7 @@ Aucune clé API requise. Données gratuites et libres.
 - **Rafraîchissement toutes les heures**
 - **Suivi GPS dynamique** : utilisez votre téléphone (entité `person` ou `device_tracker`) pour suivre les pollens en vacances
 - **Plusieurs instances** : une par personne ou par lieu (Maison, Travail, Vacances…)
+- **Transparence du suivi** (depuis 2.3.0) : chaque capteur expose en attribut l'entité suivie et la position réellement utilisée, pour vérifier facilement que le suivi GPS fonctionne bien (voir ci-dessous)
 
 ---
 
@@ -56,6 +57,21 @@ Aucune clé API requise. Données gratuites et libres.
 
 ---
 
+## Attributs exposés par chaque capteur
+
+| Attribut | Toujours présent | Description |
+|----------|:---:|-------------|
+| `risque` | ✅ | Libellé du niveau de risque (Nul → Très élevé) |
+| `source` | ✅ | `open_meteo` ou `silam` |
+| `concentration_m3` | ✅ | Concentration en grains/m³ |
+| `concentration_m3_silam` | ❌ | Present uniquement si une valeur SILAM est disponible en complément |
+| `tracker_entity` | ❌ | Entité `person`/`device_tracker` suivie — **absent si l'instance utilise une position fixe** |
+| `latitude_suivie` / `longitude_suivie` | ✅ | Position réellement utilisée pour la dernière requête (celle du tracker si configuré, sinon la position fixe) |
+
+**Comment vérifier que le suivi GPS fonctionne** : ouvre l'entité dans Développeur → États et regarde `tracker_entity` (doit afficher ton `person.xxx`/`device_tracker.xxx`) et `latitude_suivie`/`longitude_suivie` (doit correspondre à ta position actuelle, pas à celle de la maison).
+
+---
+
 ## Niveaux de risque
 
 | Niveau | Libellé |
@@ -75,6 +91,9 @@ Seuils basés sur les recommandations du **Réseau Européen d'Aéroallergologie
 
 | Version | Notes |
 |---------|-------|
+| 2.3.0 | Nouveaux attributs `tracker_entity`, `latitude_suivie`, `longitude_suivie` pour vérifier le suivi GPS |
+| 2.2.3 | Correctifs mineurs |
+| 2.2.2 | Correctifs mineurs |
 | 2.2.1 | Fix unique_id et nom appareil pour instances multiples au même endroit |
 | 2.2.0 | Noms personnalisés par instance |
 | 2.1.1 | Fix migration config |
