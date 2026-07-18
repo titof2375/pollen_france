@@ -8,7 +8,8 @@
           "name": "Nom",
           "tracker": "Personne ou téléphone à suivre (optionnel)",
           "latitude": "Latitude (position fixe par défaut)",
-          "longitude": "Longitude (position fixe par défaut)"
+          "longitude": "Longitude (position fixe par défaut)",
+          "scan_interval": "Intervalle de rafraîchissement (minutes)"
         }
       }
     },
