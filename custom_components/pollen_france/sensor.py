@@ -11,7 +11,16 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, CONF_NAME, ATTR_RISK, ATTR_SOURCE, ATTR_CONCENTRATION
+from .const import (
+    DOMAIN,
+    CONF_NAME,
+    ATTR_RISK,
+    ATTR_SOURCE,
+    ATTR_CONCENTRATION,
+    ATTR_TRACKER,
+    ATTR_LATITUDE_USED,
+    ATTR_LONGITUDE_USED,
+)
 from .coordinator import PollenFranceCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -114,6 +123,10 @@ class PollenSensor(CoordinatorEntity[PollenFranceCoordinator], SensorEntity):
         }
         if "concentration_m3_silam" in self._data:
             attrs["concentration_m3_silam"] = self._data["concentration_m3_silam"]
+        if self.coordinator.tracker:
+            attrs[ATTR_TRACKER] = self.coordinator.tracker
+        attrs[ATTR_LATITUDE_USED] = self.coordinator.last_latitude
+        attrs[ATTR_LONGITUDE_USED] = self.coordinator.last_longitude
         return attrs
 
     @property
