@@ -51,9 +51,8 @@ Aucune clé API requise. Données gratuites et libres.
 | Champ | Obligatoire | Description |
 |-------|-------------|-------------|
 | Nom | ✅ | Nom de l'instance (ex : Maison, Christophe…) |
-| Latitude | ✅ | Pré-remplie avec la position de votre HA |
-| Longitude | ✅ | Pré-remplie avec la position de votre HA |
-| Tracker GPS | ❌ | Entité `person` ou `device_tracker` pour localisation dynamique |
+| Tracker GPS | ❌ | Entité `person` ou `device_tracker` pour localisation dynamique — **si renseigné, aucune coordonnée à saisir** |
+| Latitude / Longitude | ❌ | Utilisées uniquement en secours si aucun tracker n'est renseigné (laissez vide sinon) |
 | Intervalle de rafraîchissement | ❌ | En minutes, 60 par défaut (minimum 5) |
 
 ---
@@ -92,6 +91,7 @@ Seuils basés sur les recommandations du **Réseau Européen d'Aéroallergologie
 
 | Version | Notes |
 |---------|-------|
+| 2.4.1 | Latitude/longitude vraiment optionnelles dans le formulaire (n'apparaissent plus pré-remplies comme si obligatoires) quand un tracker GPS est utilisé |
 | 2.4.0 | Intervalle de rafraîchissement configurable (`scan_interval`) |
 | 2.3.0 | Nouveaux attributs `tracker_entity`, `latitude_suivie`, `longitude_suivie` pour vérifier le suivi GPS |
 | 2.2.3 | Correctifs mineurs |
